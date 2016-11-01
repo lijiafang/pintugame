@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		.canvas-con{
+			display: flex;
+			width: 500px;
+			flex-wrap: wrap;
+			justify-content: space-between;
+		}
+		.canvas-con .chip-con{
+			margin-bottom: 20px;
+		}
+		.canvas-con .chip-novalue{
+			visibility: hide;
+		}
+
+	</style>
+</head>
+<body>
+
+<!-- <img style="display:none;" src="img.png" class="test-img"> -->
+<!-- <canvas id="canvas" width="600px" height="900px"></canvas> -->
+
+<div class="canvas-con">
+	<canvas id="chip0" data-index="0,0" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chipNo1" class="chip-con chip-novalue" width="150" height="200"></canvas>
+	<canvas id="chipNo2" class="chip-con chip-novalue" width="150" height="200""></canvas>
+	<canvas id="chip1" data-index="1,0" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip2" data-index="1,1" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip3" data-index="1,2" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip4" data-index="2,0" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip5" data-index="2,1" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip6" data-index="2,2" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip7" data-index="3,0" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip8" data-index="3,1" class="chip-con" width="150" height="200""></canvas>
+	<canvas id="chip9" data-index="3,2" class="chip-con" width="150" height="200""></canvas>
+</div>
+<script type="text/javascript" src = 'jquery.js'></script>
+<script type="text/javascript">
+
+// var canvas = document.getElementById("canvas");
+//切割原图
+var canvas = document.createElement("canvas");
+canvas.height = 900;
+canvas.width = 600;
+$("body").append(canvas)
+var ctx = canvas.getContext("2d");
+var img = new Image();
+img.crossOrigin = "Anonymous";
+img.src = "http://p0.meituan.net/codeman/d64d27aebef1e94d8e88a6372b8939cb357846.jpg";
+
+img.onload = function(){
+	//将图片裁剪成450*600大小
+	//如果图片的 宽>高, 绘制图片的时候，翻转90度
+	if(img.width > img.height){
+		var imgW = 600,
+		imgH = 450,
+		rate = 450/600;
+
+		 // ctx.drawImage(img, 0, 0, imgW, imgH);
+		ctx.save();
+		ctx.translate(imgH, 0);
+		ctx.rotate(90*Math.PI/180);
+		ctx.drawImage(img, 0, 0, imgW, imgH);
+		ctx.translate(-imgH, 0);
+		ctx.restore();
+	}else{
+		var imgW = 450,
+		imgH = 600,
+		rate = 450/600;
+		ctx.drawImage(img, 0, 0, imgW, imgH);
+	}
+
+	imgW = 450;
+	imgH = 600;
+	var chipW = imgW/3,
+		chipH = imgH/3; 
+	var chipCons = $(".chip-con");
+	
+	//放置数据
+	var index = 1;
+	var chipDatas = [];
+	for(var h = 0, columnIndex = 1;h<imgH;h+=chipH, columnIndex++){
+		for(var w = 0, rowIndex = 0; w < imgW; w += chipW, rowIndex++){
+			var chipData = ctx.getImageData(w,h,chipW,chipH);
+			canvasObjs[columnIndex][rowIndex] = {};
+			canvasObjs[columnIndex][rowIndex]["imgData"] = chipData;
+			chipDatas.push(chipData);
+
+			// var _ctx = $("#chip" + index)[0].getContext("2d");
+			// _ctx.putImageData(chipData, 0,0);
+			// canvasObjs[columnIndex][rowIndex]["imgTemp"] = chipData;
+			// index ++;
+		}
+	}
+	initCanv(chipDatas);
+	
+}
+function initCanv(chipDatas){
+	chipDatas = shuffle(chipDatas);
+	for(var i = 0; i < chipDatas.length; i ++){
+		var $canvas = $("#chip" + (i + 1)),
+		    _ctx = $canvas[0].getContext("2d");
+		_ctx.putImageData(chipDatas[i], 0,0);
+		var x = $canvas.attr("data-index").split(",")[1],
+			y = $canvas.attr("data-index").split(",")[0];
+		canvasObjs[y][x]["imgTemp"] = chipDatas[i];
+	}
+}
+//洗牌算法，打乱数组顺序
+function shuffle(arr){
+	var length = arr.length;
+	var input = arr;
+	for(var i = length - 1; i > 0; i--){
+		var randomIndex = Math.floor(Math.random() * (i + 1));
+		var itemAtIndex = input[randomIndex]; 
+
+        input[randomIndex] = input[i]; 
+        input[i] = itemAtIndex;
+	}
+	return input
+}
+//数据结构
+var canvasObjs = {
+	0: {
+		0:{},
+		1:{},
+		2:{}
+	},
+	1: {},
+	2: {},
+	3: {}
+};
+var moveFlag = false,
+	startX, startY, endX, endY, startId;
+$("[data-index]").on("mousedown", function(e){
+	moveFlag = true;
+	startX = e.clientX;
+	startY = e.clientY;
+	startId = $(this).attr("data-index");
+	console.log( "start"+ ":" + e.clientX + ":" + e.clientY);
+});
+$(".canvas-con").on("mousemove", function(e){
+	if(moveFlag){
+		console.log("move");
+	}
+});
+$(".canvas-con").on("mouseup", function(e){
+	if(moveFlag){
+		console.log(e.clientX + ":" + e.clientY);
+		endX = e.clientX;
+		endY = e.clientY;
+		var rowAbsolute = Math.abs(endX - startX),
+			columnAbsolute = Math.abs(endY - startY);
+		if(rowAbsolute < 5 && columnAbsolute < 5){
+			moveFlag = false;
+			return;
+		}
+		var  directionFlag;
+		if((rowAbsolute > columnAbsolute) && (columnAbsolute < 10)){
+			if(endX > startX){
+				directionFlag = "rowRight";
+			}else{
+				directionFlag = "rowLeft";
+			}
+		}else if((rowAbsolute < columnAbsolute) && (rowAbsolute < 10)){
+			if(endY > startY){
+				directionFlag = "columnDown";
+			}else{
+				directionFlag = "columnTop";
+			}
+		}else{
+			moveFlag = false;
+			return;
+		}
+		console.log(directionFlag)
+		moveChip(directionFlag);
+		moveFlag = false;
+	}
+});
+//全局变量，当前为空的canvas
+var emptyX = 0, emptyY = 0;
+
+function moveChip(directionFlag){
+	var indexY = parseInt(startId.split(",")[0], 10),
+		indexX = parseInt(startId.split(",")[1], 10);
+	
+	if(directionFlag.indexOf("column") != -1){
+		if(indexX != emptyX){
+			console.log("not in the same column");
+			return;
+		}
+	}else{
+		if(indexY != emptyY){
+			console.log("not in the same row");
+			return;
+		}
+	}
+	var isMove = handleFuncs[directionFlag](indexY, indexX);
+	if(isMove){
+		canvasObjs[indexY][indexX].imgTemp = "";
+		var _ctx = $("[data-index='"+ indexY + "," + indexX +"']")[0].getContext("2d");
+		_ctx.clearRect(0,0,150,200);
+	}
+}
+var handleFuncs = {
+	"rowRight" : function(indexY, indexX){
+		if(emptyX < indexX){
+			return false;
+		}
+		for(var i = emptyX; i > indexX; i--){
+			canvasObjs[indexY][i].imgTemp = canvasObjs[indexY][i-1].imgTemp;
+			var _ctx = $("[data-index='"+ indexY + "," + i +"']")[0].getContext("2d");
+			_ctx.putImageData(canvasObjs[indexY][i].imgTemp, 0,0);
+		}
+		emptyX = indexX;
+		return true;
+	},
+	"rowLeft": function(indexY, indexX){
+		if(emptyX > indexX){
+			return false;
+		}
+		for(var i = emptyX; i < indexX; i++){
+			canvasObjs[indexY][i].imgTemp = canvasObjs[indexY][i+1].imgTemp;
+			var _ctx = $("[data-index='"+ indexY + "," + i +"']")[0].getContext("2d");
+			_ctx.putImageData(canvasObjs[indexY][i].imgTemp, 0,0);
+		}
+		emptyX = indexX;
+		return true;
+	},
+	"columnTop": function(indexY, indexX){
+		if(emptyY > indexY){
+			return false;
+		}
+		for(var i = emptyY; i < indexY; i++){
+			canvasObjs[i][indexX].imgTemp = canvasObjs[i+1][indexX].imgTemp;
+			var _ctx = $("[data-index='"+ i + "," + indexX +"']")[0].getContext("2d");
+			_ctx.putImageData(canvasObjs[i][indexX].imgTemp, 0,0);
+		}
+		emptyY = indexY;
+		return true;
+	},
+	"columnDown": function(indexY, indexX){
+		if(emptyY < indexY){
+			return false;
+		}
+		for(var i = emptyY; i > indexY; i--){
+			canvasObjs[i][indexX].imgTemp = canvasObjs[i-1][indexX].imgTemp;
+			var _ctx = $("[data-index='"+ i + "," + indexX +"']")[0].getContext("2d");
+			_ctx.putImageData(canvasObjs[i][indexX].imgTemp, 0,0);
+		}
+		emptyY = indexY;
+		return true;
+	}
+}
+
+</script>
+</body>
+</html>
